@@ -38,7 +38,8 @@
 module util_dacfifo #(
 
   parameter       ADDRESS_WIDTH = 6,
-  parameter       DATA_WIDTH = 128) (
+  parameter       DATA_WIDTH = 128,
+  parameter       CYCLIC_OUTPUT = 1) (
 
   // DMA interface
 
@@ -93,6 +94,7 @@ module util_dacfifo #(
   reg                                 dac_xfer_out_fifo_d = 1'b0;
   reg                                 dac_bypass = 1'b0;
   reg                                 dac_bypass_m1 = 1'b0;
+  reg                                 dac_done = 1'b0;
 
   // internal wires
 
@@ -253,12 +255,14 @@ module util_dacfifo #(
   always @(posedge dac_clk) begin
     if (dac_rst_int_s == 1'b1) begin
       dac_raddr <= 'b0;
+      dac_done <= 'b0;
     end else begin
       if (dac_mem_ren_s == 1'b1) begin
         if (dac_lastaddr == 'b0 || dac_raddr != dac_lastaddr) begin
           dac_raddr <= dac_raddr + 1'b1;
         end else begin
           dac_raddr <= 'b0;
+          dac_done <= 1'b1;
         end
       end
     end
@@ -326,10 +330,23 @@ module util_dacfifo #(
 
   always @(posedge dac_clk) begin
     if (dac_valid) begin
-      dac_data <= (dac_bypass == 1'b1) ? dac_data_bypass_s : dac_data_fifo_s;
+      dac_data <= (dac_bypass == 1'b1) ? dac_data_bypass_s : ((CYCLIC_OUTPUT || (!dac_done)) ? dac_data_fifo_s : 'b0);
     end
+
     // this signal along with the dac_valid validate the data coming out from the buffer
-    dac_xfer_out <= (dac_bypass == 1'b1) ? dac_xfer_req : dac_xfer_out_fifo_d;
+
+    if (dac_bypass) begin
+        dac_xfer_out <= dac_xfer_req;
+    end else begin
+        // This mechanism allows a positive edge on dac_xfer_out at any point in time,
+        // but negative edges are only allowed when our dac is ready. (dac_valid)
+        if (!dac_xfer_out)
+            dac_xfer_out <= (dac_xfer_out_fifo_d & (CYCLIC_OUTPUT | (~dac_done)));
+        else if (dac_valid)
+            dac_xfer_out <= (dac_xfer_out_fifo_d & (CYCLIC_OUTPUT | (~dac_done)));
+
+    end;
+
   end
 
 endmodule
