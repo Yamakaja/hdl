@@ -1,0 +1,3 @@
+[submodule "library/boxmuller"]
+	path = library/boxmuller
+	url = https://github.com/Yamakaja/boxmuller.git
