@@ -1,3 +1,6 @@
 [submodule "library/boxmuller"]
 	path = library/boxmuller
 	url = https://github.com/Yamakaja/boxmuller.git
+[submodule "library/ldpc_ber_tester"]
+	path = library/ldpc_ber_tester
+	url = https://github.com/Yamakaja/ldpc_ber_tester.git
