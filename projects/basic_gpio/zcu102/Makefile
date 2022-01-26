@@ -9,7 +9,8 @@ PROJECT_NAME := basic_gpio_zcu102
 M_DEPS += timing_constr.xdc
 M_DEPS += ../../scripts/adi_pd.tcl
 M_DEPS += ../../common/zcu102/zcu102_system_constr.xdc
-M_DEPS += ../../common/zcu102/zcu102_system_bd.tcl
+M_DEPS += ../../common/zcu102/zcu102_system_constr.xdc
+M_DEPS += ../../common/xilinx/adi_xilinx_ila.tcl
 M_DEPS += ../../../library/common/ad_iobuf.v
 
 LIB_DEPS += axi_sysid
