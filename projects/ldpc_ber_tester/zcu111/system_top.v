@@ -38,11 +38,13 @@
 module system_top (
 
   input  [12:0] gpio_bd_i,
-  output [ 7:0] gpio_bd_o
+  output [ 7:0] gpio_bd_o,
+  input default_sysclk1_300mhz_clk_n,
+  input default_sysclk1_300mhz_clk_p
 
 );
   // internal signals
-
+  
   wire    [94:0]  gpio_i;
   wire    [94:0]  gpio_o;
   wire    [94:0]  gpio_t;
@@ -65,6 +67,8 @@ module system_top (
   assign gpio_i[94:21] = 'h0;
 
   system_wrapper i_system_wrapper (
+    .default_sysclk1_300mhz_clk_n(default_sysclk1_300mhz_clk_n),
+    .default_sysclk1_300mhz_clk_p(default_sysclk1_300mhz_clk_p),
     .gpio_i (gpio_i),
     .gpio_o (gpio_o),
     .gpio_t (gpio_t),

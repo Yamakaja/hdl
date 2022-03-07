@@ -10,20 +10,70 @@ ad_ip_parameter rom_sys_0 CONFIG.ROM_ADDR_BITS 9
 
 sysid_gen_sys_init_file
 
-set sys_core_clk $sys_iodelay_clk
-set sys_core_resetn $sys_iodelay_resetn
+# Clocking Wizard
+ad_ip_instance clk_wiz clock_gen [list \
+    USE_PHASE_ALIGNMENT {true} \
+    OPTIMIZE_CLOCKING_STRUCTURE_EN {true} \
+    JITTER_SEL {Min_O_Jitter} \
+    CLK_IN1_BOARD_INTERFACE {default_sysclk1_300mhz} \
+    JITTER_OPTIONS {UI} \
+    CLKIN1_UI_JITTER {0.01} \
+    CLKOUT2_USED {true} \
+    CLK_OUT1_PORT {core_clk} \
+    CLK_OUT2_PORT {intf_clk} \
+    CLKOUT1_REQUESTED_OUT_FREQ {666} \
+    CLKOUT2_REQUESTED_OUT_FREQ {400.000} \
+    USE_SAFE_CLOCK_STARTUP {false} \
+    RESET_TYPE {ACTIVE_LOW} \
+    PRIM_SOURCE {Differential_clock_capable_pin} \
+    SECONDARY_SOURCE {Single_ended_clock_capable_pin} \
+    CLKIN2_UI_JITTER {0.010} \
+    CLKIN1_JITTER_PS {33.330000000000005} \
+    CLKIN2_JITTER_PS {100.0} \
+    CLKOUT1_DRIVES {Buffer} \
+    CLKOUT2_DRIVES {Buffer} \
+    CLKOUT3_DRIVES {Buffer} \
+    CLKOUT4_DRIVES {Buffer} \
+    CLKOUT5_DRIVES {Buffer} \
+    CLKOUT6_DRIVES {Buffer} \
+    CLKOUT7_DRIVES {Buffer} \
+    FEEDBACK_SOURCE {FDBK_AUTO} \
+    MMCM_DIVCLK_DIVIDE {11} \
+    MMCM_BANDWIDTH {HIGH} \
+    MMCM_CLKFBOUT_MULT_F {58.000} \
+    MMCM_CLKIN1_PERIOD {3.333} \
+    MMCM_CLKIN2_PERIOD {10.0} \
+    MMCM_REF_JITTER1 {0.010} \
+    MMCM_REF_JITTER2 {0.010} \
+    MMCM_CLKOUT0_DIVIDE_F {2.375} \
+    MMCM_CLKOUT1_DIVIDE {4} \
+    NUM_OUT_CLKS {2} \
+    RESET_PORT {resetn} \
+    CLKOUT1_JITTER {94.358} \
+    CLKOUT1_PHASE_ERROR {194.551} \
+    CLKOUT2_JITTER {101.204} \
+    CLKOUT2_PHASE_ERROR {194.551}]
+apply_bd_automation -rule xilinx.com:bd_rule:board -config { Board_Interface {default_sysclk1_300mhz ( 300 MHZ sysclk ) } Manual_Source {Auto}}  [get_bd_intf_pins clock_gen/CLK_IN1_D]
 
-# Setup 400 MHz Interface CLK
-set_property -dict [list \
-    CONFIG.PSU__FPGA_PL3_ENABLE {1} \
-    CONFIG.PSU__CRL_APB__PL3_REF_CTRL__SRCSEL {IOPLL} \
-    CONFIG.PSU__CRL_APB__PL3_REF_CTRL__FREQMHZ {400} \
-    ] [get_bd_cells sys_ps8]
+ad_connect sys_ps8/pl_resetn0 clock_gen/resetn
 
+# Core clock
+ad_ip_instance proc_sys_reset sys_core_rstgen
+ad_ip_parameter sys_core_rstgen CONFIG.C_EXT_RST_WIDTH 1
+
+ad_connect clock_gen/core_clk                   sys_core_clk
+ad_connect sys_ps8/pl_resetn0                   sys_core_rstgen/ext_reset_in
+ad_connect sys_core_clk                         sys_core_rstgen/slowest_sync_clk
+ad_connect sys_core_rstgen/peripheral_aresetn   sys_core_resetn
+
+set sys_core_clk    [get_bd_nets sys_core_clk]
+set sys_core_resetn [get_bd_nets sys_core_resetn]
+
+# Intf clock
 ad_ip_instance proc_sys_reset sys_intf_rstgen
 ad_ip_parameter sys_intf_rstgen CONFIG.C_EXT_RST_WIDTH 1
 
-ad_connect sys_ps8/pl_clk3                      sys_intf_clk
+ad_connect clock_gen/intf_clk                   sys_intf_clk
 ad_connect sys_ps8/pl_resetn0                   sys_intf_rstgen/ext_reset_in
 ad_connect sys_intf_clk                         sys_intf_rstgen/slowest_sync_clk
 ad_connect sys_intf_rstgen/peripheral_aresetn   sys_intf_resetn
@@ -81,6 +131,10 @@ proc create_sd_fec_with_ber {id sd_addr ber_addr} {
 
     ad_cpu_interconnect $sd_addr $sd_fec_name
     ad_cpu_interconnect $ber_addr $ber_name
+
+    ad_cpu_interrupt "ps-$id" "mb-$id" $ber_name/interrupt
+    set sd_intr_id [expr {$id + 8}]
+    ad_cpu_interrupt "ps-$sd_intr_id" "mb-$sd_intr_id" $sd_fec_name/interrupt
 }
 
 create_sd_fec_with_ber 0 0x44000000 0x44800000
@@ -89,3 +143,4 @@ create_sd_fec_with_ber 2 0x44200000 0x44a00000
 create_sd_fec_with_ber 3 0x44300000 0x44b00000
 create_sd_fec_with_ber 4 0x44400000 0x44c00000
 create_sd_fec_with_ber 5 0x44500000 0x44d00000
+
